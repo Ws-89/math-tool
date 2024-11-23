@@ -1,0 +1,19 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# Maven/Gradle
+target/
+build/
+
+# Systemowe
+.DS_Store
+Thumbs.db
+
+# Logi
+*.log
+
+# Pliki tymczasowe
+*.class
