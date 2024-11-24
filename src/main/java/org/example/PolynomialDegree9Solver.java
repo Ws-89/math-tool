@@ -21,7 +21,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
     JTextField x9TextField, x8TextField, x7TextField, x6TextField, x5TextField, x4TextField, x3TextField, x2TextField, x1TextField, cTextField, xValTextField;
 
     public PolynomialDegree9Solver() {
-        setSize(1500,400);
+        setSize(1500,1000);
         setTitle("Polynomial Solver Degree 9");
         setLayout(null);
 
