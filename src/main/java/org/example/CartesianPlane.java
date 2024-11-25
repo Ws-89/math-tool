@@ -4,12 +4,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
 import java.math.BigDecimal;
 
 public class CartesianPlane extends JPanel {
     private int offsetX = 400, offsetY = 400; // Pozycja środka siatki
     private double scale = 1.0; // Skala siatki
+    private String transformedCoordinates = "";
 
     private BigDecimal X9 = new BigDecimal("0.0");
     private BigDecimal X8 = new BigDecimal("0.0");
@@ -61,7 +62,7 @@ public class CartesianPlane extends JPanel {
         this.addMouseWheelListener(e -> {
             if (e.getPreciseWheelRotation() < 0) {
                 scale *= 1.1;
-            } else {
+            } else if (scale > 0.001){
                 scale /= 1.1;
             }
             repaint();
@@ -78,6 +79,29 @@ public class CartesianPlane extends JPanel {
         g2d.translate(offsetX, offsetY);
         g2d.scale(scale, scale);
 
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                // Pobranie współrzędnych myszy w oknie
+                Point2D mousePoint = new Point2D.Double(e.getX(), e.getY());
+
+                // Transformacja współrzędnych do układu "przesuniętego"
+                try {
+                    Point2D transformedPoint = transform.inverseTransform(mousePoint, null);
+                    transformedCoordinates = String.format(
+                            "Współrzędne (po transformacji): X=%.2f, Y=%.2f",
+                            transformedPoint.getX(), transformedPoint.getY()
+                    );
+                } catch (Exception ex) {
+                    transformedCoordinates = "Błąd transformacji!";
+                }
+
+                // Odśwież panel
+                repaint();
+            }
+        });
+
+
         // Rysowanie siatki
         g2d.setColor(Color.LIGHT_GRAY);
         for (int x = -1000000; x <= 1000000; x += 50) {
@@ -93,6 +117,13 @@ public class CartesianPlane extends JPanel {
         g2d.drawLine(-1000000, 0, 1000000, 0); // Oś X
         g2d.drawLine(0, -1000000, 0, 1000000); // Oś Y
 
+        // Dodawanie skali do siatki
+        g2d.setColor(Color.BLUE);
+        g2d.drawString("5", 50, -10);
+        g2d.drawString("-5", -50, -10);
+        g2d.drawString("5", 0, -50);
+        g2d.drawString("-5", 0, 50);
+
         // Rysowanie funkcji kwadratowej
         g2d.setColor(Color.RED);
         g2d.setStroke(new BasicStroke(2));
@@ -101,7 +132,7 @@ public class CartesianPlane extends JPanel {
         BigDecimal previousX = null;
         BigDecimal previousY = null;
 
-        double scale = 10.0;
+        double graph_scale = 10.0;
 
         while (x.compareTo(STOP) <= 0){
             //Convert y = ax^2 + bx + c
@@ -118,10 +149,10 @@ public class CartesianPlane extends JPanel {
 
             if(previousX != null & previousY != null) {
                 // Convert coordinates to screen space
-                int x1 = (int) (previousX.doubleValue() * scale);
-                int y1 = (int) (previousY.doubleValue() * scale);
-                int x2 = (int) (x.doubleValue() * scale);
-                int y2 = (int) (y.doubleValue() * scale);
+                int x1 = (int) (previousX.doubleValue() * graph_scale);
+                int y1 = (int) (previousY.doubleValue() * graph_scale);
+                int x2 = (int) (x.doubleValue() * graph_scale);
+                int y2 = (int) (y.doubleValue() * graph_scale);
 
                 g2d.drawLine(x1, -y1, x2, -y2);
             }
@@ -134,6 +165,10 @@ public class CartesianPlane extends JPanel {
 
         // Przywrócenie oryginalnego przekształcenia
         g2d.setTransform(transform);
+        g2d.setColor(Color.BLACK);
+        g2d.drawString("Scale: " + String.format("%.2f", scale), 10, 20);
+        g2d.drawString(transformedCoordinates, 10, 40);
+
     }
 
     public void setCoefficients(double a, double b, double c) {
