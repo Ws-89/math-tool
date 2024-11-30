@@ -6,11 +6,11 @@ import java.awt.event.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.math.BigDecimal;
+import java.math.MathContext;
 
 public class CartesianPlane extends JPanel {
-    private int offsetX = 400, offsetY = 400; // Pozycja środka siatki
+    private int offsetX = 350, offsetY = 350; // Pozycja środka siatki
     private double scale = 1.0; // Skala siatki
-    private String transformedCoordinates = "";
 
     private BigDecimal X9 = new BigDecimal("0.0");
     private BigDecimal X8 = new BigDecimal("0.0");
@@ -18,7 +18,7 @@ public class CartesianPlane extends JPanel {
     private BigDecimal X6 = new BigDecimal("0.0");
     private BigDecimal X5 = new BigDecimal("0.0");
     private BigDecimal X4 = new BigDecimal("0.0");
-    private BigDecimal X3 = new BigDecimal("0.0");
+    private BigDecimal X3 = new BigDecimal("1.0");
     private BigDecimal X2 = new BigDecimal("1.0");
     private BigDecimal X1 = new BigDecimal("0.0");
     private BigDecimal C = new BigDecimal("0.0");
@@ -67,6 +67,7 @@ public class CartesianPlane extends JPanel {
             }
             repaint();
         });
+
     }
 
     @Override
@@ -76,31 +77,12 @@ public class CartesianPlane extends JPanel {
 
         // Przekształcenie dla skali i przesunięcia
         AffineTransform transform = g2d.getTransform();
+
+        // Przekształcenie dla skali i przesunięcia
+        // Ustawienie globalnej transformacji dla rysowania
+
         g2d.translate(offsetX, offsetY);
         g2d.scale(scale, scale);
-
-        addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                // Pobranie współrzędnych myszy w oknie
-                Point2D mousePoint = new Point2D.Double(e.getX(), e.getY());
-
-                // Transformacja współrzędnych do układu "przesuniętego"
-                try {
-                    Point2D transformedPoint = transform.inverseTransform(mousePoint, null);
-                    transformedCoordinates = String.format(
-                            "Współrzędne (po transformacji): X=%.2f, Y=%.2f",
-                            transformedPoint.getX(), transformedPoint.getY()
-                    );
-                } catch (Exception ex) {
-                    transformedCoordinates = "Błąd transformacji!";
-                }
-
-                // Odśwież panel
-                repaint();
-            }
-        });
-
 
         // Rysowanie siatki
         g2d.setColor(Color.LIGHT_GRAY);
@@ -119,10 +101,10 @@ public class CartesianPlane extends JPanel {
 
         // Dodawanie skali do siatki
         g2d.setColor(Color.BLUE);
-        g2d.drawString("5", 50, -10);
-        g2d.drawString("-5", -50, -10);
-        g2d.drawString("5", 0, -50);
-        g2d.drawString("-5", 0, 50);
+        g2d.drawString("5", 50, -5);
+        g2d.drawString("-5", -50, -5);
+        g2d.drawString("5", 0, -55);
+        g2d.drawString("-5", 0, 45);
 
         // Rysowanie funkcji kwadratowej
         g2d.setColor(Color.RED);
@@ -135,7 +117,6 @@ public class CartesianPlane extends JPanel {
         double graph_scale = 10.0;
 
         while (x.compareTo(STOP) <= 0){
-            //Convert y = ax^2 + bx + c
             BigDecimal y = X9.multiply(x.pow(9))
                     .add(X8.multiply(x.pow(8)))
                     .add(X7.multiply(x.pow(7)))
@@ -167,52 +148,32 @@ public class CartesianPlane extends JPanel {
         g2d.setTransform(transform);
         g2d.setColor(Color.BLACK);
         g2d.drawString("Scale: " + String.format("%.2f", scale), 10, 20);
-        g2d.drawString(transformedCoordinates, 10, 40);
-
     }
 
-    public void setCoefficients(double a, double b, double c) {
-//        this.a = a;
-//        this.b = b;
-//        this.c = c;
+    public void setCoefficients(BigDecimal X9,
+                                BigDecimal X8,
+                                BigDecimal X7,
+                                BigDecimal X6,
+                                BigDecimal X5,
+                                BigDecimal X4,
+                                BigDecimal X3,
+                                BigDecimal X2,
+                                BigDecimal X1,
+                                BigDecimal C
+                                ) {
+        this.X9 = X9;
+        this.X8 = X8;
+        this.X7 = X7;
+        this.X6 = X6;
+        this.X5 = X5;
+        this.X4 = X4;
+        this.X3 = X3;
+        this.X2 = X2;
+        this.X1 = X1;
+        this.C = C;
         repaint();
     }
 
-    public static void main(String[] args) {
-        JFrame frame = new JFrame("Układ współrzędnych");
-        CartesianPlane plane = new CartesianPlane();
 
-        // Panel z polami tekstowymi
-        JPanel controls = new JPanel();
-        JTextField fieldA = new JTextField("1", 5);
-        JTextField fieldB = new JTextField("0", 5);
-        JTextField fieldC = new JTextField("0", 5);
-        JButton drawButton = new JButton("Rysuj");
 
-        controls.add(new JLabel("a:"));
-        controls.add(fieldA);
-        controls.add(new JLabel("b:"));
-        controls.add(fieldB);
-        controls.add(new JLabel("c:"));
-        controls.add(fieldC);
-        controls.add(drawButton);
-
-        drawButton.addActionListener(e -> {
-            try {
-                double a = Double.parseDouble(fieldA.getText());
-                double b = Double.parseDouble(fieldB.getText());
-                double c = Double.parseDouble(fieldC.getText());
-                plane.setCoefficients(a, b, c);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Wprowadź poprawne liczby!", "Błąd", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        frame.setLayout(new BorderLayout());
-        frame.add(plane, BorderLayout.CENTER);
-        frame.add(controls, BorderLayout.SOUTH);
-        frame.setSize(800, 800);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setVisible(true);
-    }
 }

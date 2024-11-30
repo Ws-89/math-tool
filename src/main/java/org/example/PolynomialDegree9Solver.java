@@ -6,19 +6,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-
-import static java.lang.Math.abs;
-import static java.lang.Math.pow;
 
 public class PolynomialDegree9Solver extends JFrame implements ActionListener {
 
     JButton bEvalute, bReset;
-    JLabel lWyswietlDate, x9Label, x8Label, x7Label, x6Label, x5Label, x4Label, x3Label, x2Label, x1Label, cLabel, xValLabel;
+    JLabel displayResult, x9Label, x8Label, x7Label, x6Label, x5Label, x4Label, x3Label, x2Label, x1Label, cLabel, xValLabel;
     JTextField x9TextField, x8TextField, x7TextField, x6TextField, x5TextField, x4TextField, x3TextField, x2TextField, x1TextField, cTextField, xValTextField;
+    CartesianPlane plane;
 
     public PolynomialDegree9Solver() {
         setSize(1500,1000);
@@ -189,88 +188,87 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         add(bReset);
         bReset.addActionListener(this);
 
-        lWyswietlDate = new JLabel("Result:");
-        lWyswietlDate.setBounds(50, 170, 200, 20);
-        lWyswietlDate.setForeground(Color.BLUE);
-        lWyswietlDate.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        add(lWyswietlDate);
+        displayResult = new JLabel("Result:");
+        displayResult.setBounds(50, 170, 200, 20);
+        displayResult.setForeground(Color.BLUE);
+        displayResult.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        add(displayResult);
+
+        plane = new CartesianPlane();
+        plane.setBounds(50, 200, 700, 700);
+        plane.setBorder(BorderFactory.createLineBorder(Color.black));
+        add(plane);
     }
 
-    public double calculate(double x9, double x8, double x7, double x6, double x5, double x4, double x3, double x2, double x1, double c, Double x){
-        return x9*pow(x, 9) + x8*pow(x, 8) + x7*pow(x, 7) + x6*pow(x, 6) + x5*pow(x, 5) + x4*pow(x, 4) + x3*pow(x, 3) + x2*pow(x, 2) + x1*x + c;
-    }
+    public List<BigDecimal> findRoots(List<BigDecimal> values, BigDecimal epsilon){
+        List<BigDecimal> roots = new ArrayList<>();
 
-    public List<Double> findRoots(){
-        List<Double> roots = new ArrayList<Double>();
-        for(double i = -abs(Double.parseDouble(cTextField.getText())); i <= abs(Double.parseDouble(cTextField.getText())); i+= 0.25){
-            System.out.println(i);
-            if (calculate(
-                    Double.parseDouble(x9TextField.getText()),
-                    Double.parseDouble(x8TextField.getText()),
-                    Double.parseDouble(x7TextField.getText()),
-                    Double.parseDouble(x6TextField.getText()),
-                    Double.parseDouble(x5TextField.getText()),
-                    Double.parseDouble(x4TextField.getText()),
-                    Double.parseDouble(x3TextField.getText()),
-                    Double.parseDouble(x2TextField.getText()),
-                    Double.parseDouble(x1TextField.getText()),
-                    Double.parseDouble(cTextField.getText()),
-                    i) == 0){
-                System.out.println();
+        BigDecimal start = new BigDecimal(cTextField.getText()).abs().negate().add(new BigDecimal("1"));
+        BigDecimal end = new BigDecimal(cTextField.getText()).abs().subtract(new BigDecimal("-1"));
+        BigDecimal step = new BigDecimal("0.00001");  // Krok iteracji
+
+        for(BigDecimal i = start; i.compareTo(end) <= 0; i = i.add(step)){
+            System.out.println("start: " + i);
+            BigDecimal result = evaluatePolynomial(values, i.setScale(10, RoundingMode.HALF_UP));
+            if (result.abs().compareTo(epsilon) == -1) {
                 roots.add(i);
             }
         }
+
+
+
         return roots;
     }
 
-    public String PolynomialDivider(Double num, int rank){
-        Map<String, Double> polynomialValues = new HashMap<>();
-        Map<String, Double> result = new HashMap<>();
+    public List<Double> listOfParsedDoubleValues(){
+        List<Double> values = Arrays.asList(
+                Double.parseDouble(x9TextField.getText()),
+                Double.parseDouble(x8TextField.getText()),
+                Double.parseDouble(x7TextField.getText()),
+                Double.parseDouble(x6TextField.getText()),
+                Double.parseDouble(x5TextField.getText()),
+                Double.parseDouble(x4TextField.getText()),
+                Double.parseDouble(x3TextField.getText()),
+                Double.parseDouble(x2TextField.getText()),
+                Double.parseDouble(x1TextField.getText()),
+                Double.parseDouble(cTextField.getText()),
+                Double.parseDouble(xValTextField.getText()));
 
-        Double x9 = Double.parseDouble(x7TextField.getText());
-        if (x9 != 0) {
-            polynomialValues.put("x9", x9);
-        }
-        Double x8 = Double.parseDouble(x6TextField.getText());
-        if (x8 != 0) {
-            polynomialValues.put("x6", x8);
-        }
-        Double x7 = Double.parseDouble(x7TextField.getText());
-        if (x7 != 0) {
-            polynomialValues.put("x7", x7);
-        }
-        Double x6 = Double.parseDouble(x6TextField.getText());
-        if (x6 != 0) {
-            polynomialValues.put("x6", x6);
-        }
-        Double x5 = Double.parseDouble(x5TextField.getText());
-        if (x5 != 0) {
-            polynomialValues.put("x5", x5);
-        }
-        Double x4 = Double.parseDouble(x4TextField.getText());
-        if (x4 != 0) {
-            polynomialValues.put("x4", x4);
-        }
-        Double x3 = Double.parseDouble(x3TextField.getText());
-        if (x3 != 0) {
-            polynomialValues.put("x3", x3);
-        }
-        Double x2 = Double.parseDouble(x2TextField.getText());
-        if (x2 != 0) {
-            polynomialValues.put("x2", x2);
-        }
-        Double x1 = Double.parseDouble(x1TextField.getText());
-        if (x1 != 0) {
-            polynomialValues.put("x1", x1);
-        }
-        Double c = Double.parseDouble(cTextField.getText());
-        if (c != 0) {
-            polynomialValues.put("c", c);
-        }
+        return values;
+    }
 
+    public List<BigDecimal> listOfParsedBigDecmialValues(){
+        List<BigDecimal> values = Arrays.asList(
+                new BigDecimal(x9TextField.getText()),
+                new BigDecimal(x8TextField.getText()),
+                new BigDecimal(x7TextField.getText()),
+                new BigDecimal(x6TextField.getText()),
+                new BigDecimal(x5TextField.getText()),
+                new BigDecimal(x4TextField.getText()),
+                new BigDecimal(x3TextField.getText()),
+                new BigDecimal(x2TextField.getText()),
+                new BigDecimal(x1TextField.getText()),
+                new BigDecimal(cTextField.getText()),
+                new BigDecimal(xValTextField.getText()));
+        return values;
+    }
 
+    public Map<String, Double> parsedValuesMap(){
+        Map<String, Double> values = new HashMap<String, Double>();
 
-        return "0";
+        values.put("x9", Double.parseDouble(x9TextField.getText()));
+        values.put("x8", Double.parseDouble(x8TextField.getText()));
+        values.put("x7", Double.parseDouble(x7TextField.getText()));
+        values.put("x6", Double.parseDouble(x6TextField.getText()));
+        values.put("x5", Double.parseDouble(x5TextField.getText()));
+        values.put("x4", Double.parseDouble(x4TextField.getText()));
+        values.put("x3", Double.parseDouble(x3TextField.getText()));
+        values.put("x2", Double.parseDouble(x2TextField.getText()));
+        values.put("x1", Double.parseDouble(x1TextField.getText()));
+        values.put("c", Double.parseDouble(cTextField.getText()));
+        values.put("xVal", Double.parseDouble(xValTextField.getText()));
+
+        return values;
     }
 
     public void resetValues(){
@@ -290,25 +288,67 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == bEvalute){
-            double fun_value = calculate(
-                    Double.parseDouble(x9TextField.getText()),
-                    Double.parseDouble(x8TextField.getText()),
-                    Double.parseDouble(x7TextField.getText()),
-                    Double.parseDouble(x6TextField.getText()),
-                    Double.parseDouble(x5TextField.getText()),
-                    Double.parseDouble(x4TextField.getText()),
-                    Double.parseDouble(x3TextField.getText()),
-                    Double.parseDouble(x2TextField.getText()),
-                    Double.parseDouble(x1TextField.getText()),
-                    Double.parseDouble(cTextField.getText()),
-                    Double.parseDouble(xValTextField.getText()));
-            lWyswietlDate.setText(String.valueOf(fun_value));
-            System.out.println(findRoots());
+            List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecmialValues();
+            System.out.println(findRoots(listOfBigDecimalValues, new BigDecimal("0.02")));
+
+            System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(xValTextField.getText())));
+
         }
         else if (e.getSource() == bReset){
             resetValues();
         }
 
 
+    }
+
+    BigDecimal newtonRaphson(List<BigDecimal> values, BigDecimal x0, int maxIterations, BigDecimal tolerance) {
+        BigDecimal x = x0;
+        for (int i = 0; i < maxIterations; i++) {
+            BigDecimal fx = evaluatePolynomial(values, x);
+            BigDecimal dfx = evaluateDerivative(values, x);
+
+            // Jeśli pochodna jest bliska zeru, metoda może nie działać poprawnie
+            if (dfx.compareTo(BigDecimal.ZERO) == 0) {
+                throw new ArithmeticException("Pochodna bliska zeru, metoda nie zbiega.");
+            }
+
+            // Oblicz kolejne przybliżenie
+            BigDecimal xNext = x.subtract(fx.divide(dfx, MathContext.DECIMAL128));
+
+            // Sprawdź kryterium zbieżności
+            if (xNext.subtract(x).abs().compareTo(tolerance) < 0) {
+                return xNext; // Znaleziono rozwiązanie
+            }
+            x = xNext;
+        }
+        throw new ArithmeticException("Nie znaleziono rozwiązania w maksymalnej liczbie iteracji.");
+    }
+
+
+    // Funkcja obliczająca wartość wielomianu
+    public static BigDecimal evaluatePolynomial(List<BigDecimal> values, BigDecimal x) {
+        return values.get(0).multiply(x.pow(9))
+                .add(values.get(1).multiply(x.pow(8)))
+                .add(values.get(2).multiply(x.pow(7)))
+                .add(values.get(3).multiply(x.pow(6)))
+                .add(values.get(4).multiply(x.pow(5)))
+                .add(values.get(5).multiply(x.pow(4)))
+                .add(values.get(6).multiply(x.pow(3)))
+                .add(values.get(7).multiply(x.pow(2)))
+                .add(values.get(8).multiply(x))
+                .add(values.get(9));
+    }
+
+    // Funkcja obliczająca wartość pochodnej
+    public static BigDecimal evaluateDerivative(List<BigDecimal> values, BigDecimal x) {
+        return values.get(0).multiply(BigDecimal.valueOf(9)).multiply(x.pow(8))
+                .add(values.get(1).multiply(BigDecimal.valueOf(8)).multiply(x.pow(7)))
+                .add(values.get(2).multiply(BigDecimal.valueOf(7)).multiply(x.pow(6)))
+                .add(values.get(3).multiply(BigDecimal.valueOf(6)).multiply(x.pow(5)))
+                .add(values.get(4).multiply(BigDecimal.valueOf(5)).multiply(x.pow(4)))
+                .add(values.get(5).multiply(BigDecimal.valueOf(4)).multiply(x.pow(3)))
+                .add(values.get(6).multiply(BigDecimal.valueOf(3)).multiply(x.pow(2)))
+                .add(values.get(7).multiply(BigDecimal.valueOf(2)).multiply(x))
+                .add(values.get(8));
     }
 }
