@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -14,169 +15,87 @@ import java.util.List;
 
 public class PolynomialDegree9Solver extends JFrame implements ActionListener {
 
-    JButton bEvalute, bReset;
-    JLabel displayResult, x9Label, x8Label, x7Label, x6Label, x5Label, x4Label, x3Label, x2Label, x1Label, cLabel, xValLabel;
-    JTextField x9TextField, x8TextField, x7TextField, x6TextField, x5TextField, x4TextField, x3TextField, x2TextField, x1TextField, cTextField, xValTextField;
-    CartesianPlane plane;
+    private final JButton bEvalute, bReset, loadHistory;
+    private final JLabel displayResult;
+    private final JTextField[] fields = new JTextField[11];
+    private final CartesianPlane plane;
+    private final String FILE_NAME = "data_history.json";
+    private final DataHistoryService dataService;
 
     public PolynomialDegree9Solver() {
         setSize(1500,1000);
         setTitle("Polynomial Solver Degree 9");
         setLayout(null);
+        dataService = new DataHistoryService();
 
-        x9Label = new JLabel("x9");
-        x9Label.setBounds(50, 0, 100, 50);
-        add(x9Label);
-        x9TextField = new JTextField();
-        x9TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x9TextField::selectAll);
-            }
-        });
-        x9TextField.setText("0");
-        x9TextField.setBounds(50,50,100,50);
-        add(x9TextField);
+        int startX = 50;
+        int startY = 0;
+        int fieldWidth = 100;
+        int fieldHeight = 50;
+        int xOffset = 110;
+        int positionCounter = 0;
 
-        x8Label = new JLabel("x8");
-        x8Label.setBounds(160, 0, 100, 50);
-        add(x8Label);
-        x8TextField = new JTextField();
-        x8TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x8TextField::selectAll);
-            }
-        });
-        x8TextField.setText("0");
-        x8TextField.setBounds(160,50,100,50);
-        add(x8TextField);
+        for (int i = fields.length-1; i >= 0; i--){
+            if (i == 1){
+                JLabel label = new JLabel("c");
+                JTextField textField = new JTextField();
 
-        x7Label = new JLabel("x7");
-        x7Label.setBounds(270, 0, 100, 50);
-        add(x7Label);
-        x7TextField = new JTextField();
-        x7TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x7TextField::selectAll);
-            }
-        });
-        x7TextField.setText("0");
-        x7TextField.setBounds(270,50,100,50);
-        add(x7TextField);
+                int positionX = startX + xOffset*(fields.length-2);
 
-        x6Label = new JLabel("x6");
-        x6Label.setBounds(380, 0, 100, 50);
-        add(x6Label);
-        x6TextField = new JTextField();
-        x6TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x6TextField::selectAll);
-            }
-        });
-        x6TextField.setText("0");
-        x6TextField.setBounds(380,50,100,50);
-        add(x6TextField);
+                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
+                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
+                textField.addFocusListener(new FocusAdapter() {
+                    @Override
+                    public void focusGained(FocusEvent e) {
+                        SwingUtilities.invokeLater(textField::selectAll);
+                    }
+                });
+                textField.setText("0");
+                add(textField);
+                add(label);
+                fields[i] = textField;
 
-        x5Label = new JLabel("x5");
-        x5Label.setBounds(490, 0, 100, 50);
-        add(x5Label);
-        x5TextField = new JTextField();
-        x5TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x5TextField::selectAll);
-            }
-        });
-        x5TextField.setText("0");
-        x5TextField.setBounds(490,50,100,50);
-        add(x5TextField);
+            } else if (i == 0){
+                JLabel label = new JLabel("val");
+                JTextField textField = new JTextField();
 
-        x4Label = new JLabel("x4");
-        x4Label.setBounds(600, 0, 100, 50);
-        add(x4Label);
-        x4TextField = new JTextField();
-        x4TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x4TextField::selectAll);
-            }
-        });
-        x4TextField.setText("0");
-        x4TextField.setBounds(600,50,100,50);
-        add(x4TextField);
+                int positionX = startX + xOffset*(fields.length-1);
 
-        x3Label = new JLabel("x3");
-        x3Label.setBounds(710, 0, 100, 50);
-        add(x3Label);
-        x3TextField = new JTextField();
-        x3TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x3TextField::selectAll);
-            }
-        });
-        x3TextField.setText("0");
-        x3TextField.setBounds(710,50,100,50);
-        add(x3TextField);
+                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
+                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
+                textField.addFocusListener(new FocusAdapter() {
+                    @Override
+                    public void focusGained(FocusEvent e) {
+                        SwingUtilities.invokeLater(textField::selectAll);
+                    }
+                });
+                textField.setText("0");
+                add(textField);
+                add(label);
+                fields[i] = textField;
+            } else {
+                int num = i -1;
+                JLabel label = new JLabel("x" + num);
+                JTextField textField = new JTextField();
 
-        x2Label = new JLabel("x2");
-        x2Label.setBounds(820, 0, 100, 50);
-        add(x2Label);
-        x2TextField = new JTextField();
-        x2TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x2TextField::selectAll);
-            }
-        });
-        x2TextField.setText("0");
-        x2TextField.setBounds(820,50,100,50);
-        add(x2TextField);
+                int positionX = startX + xOffset * positionCounter;
 
-        x1Label = new JLabel("x1");
-        x1Label.setBounds(930, 0, 100, 50);
-        add(x1Label);
-        x1TextField = new JTextField();
-        x1TextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(x1TextField::selectAll);
+                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
+                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
+                textField.addFocusListener(new FocusAdapter() {
+                    @Override
+                    public void focusGained(FocusEvent e) {
+                        SwingUtilities.invokeLater(textField::selectAll);
+                    }
+                });
+                textField.setText("0");
+                add(textField);
+                add(label);
+                positionCounter++;
+                fields[i] = textField;
             }
-        });
-        x1TextField.setText("0");
-        x1TextField.setBounds(930,50,100,50);
-        add(x1TextField);
 
-        cLabel = new JLabel("c");
-        cLabel.setBounds(1040, 0, 100, 50);
-        add(cLabel);
-        cTextField = new JTextField();
-        cTextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(cTextField::selectAll);
-            }
-        });
-        cTextField.setText("0");
-        cTextField.setBounds(1040,50,100,50);
-        add(cTextField);
-
-        xValLabel = new JLabel("X val");
-        xValLabel.setBounds(1150, 0, 100, 50);
-        add(xValLabel);
-        xValTextField = new JTextField();
-        xValTextField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                SwingUtilities.invokeLater(xValTextField::selectAll);
-            }
-        });
-        xValTextField.setText("0");
-        xValTextField.setBounds(1150,50,100,50);
-        add(xValTextField);
+        }
 
         bEvalute = new JButton("Calculate");
         bEvalute.setBounds(50,110,100,50);
@@ -187,6 +106,11 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         bReset.setBounds(160,110,100,50);
         add(bReset);
         bReset.addActionListener(this);
+
+        loadHistory = new JButton("Load previous values");
+        loadHistory.setBounds(270,110,200,50);
+        add(loadHistory);
+        loadHistory.addActionListener(this);
 
         displayResult = new JLabel("Result:");
         displayResult.setBounds(50, 170, 200, 20);
@@ -203,8 +127,8 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
     public List<BigDecimal> findRoots(List<BigDecimal> values, BigDecimal epsilon){
         List<BigDecimal> roots = new ArrayList<>();
 
-        BigDecimal start = new BigDecimal(cTextField.getText()).abs().negate().add(new BigDecimal("1"));
-        BigDecimal end = new BigDecimal(cTextField.getText()).abs().subtract(new BigDecimal("-1"));
+        BigDecimal start = values.get(9).abs().negate().add(new BigDecimal("1"));
+        BigDecimal end = values.get(9).abs().subtract(new BigDecimal("-1"));
         BigDecimal step = new BigDecimal("0.00001");  // Krok iteracji
 
         for(BigDecimal i = start; i.compareTo(end) <= 0; i = i.add(step)){
@@ -214,91 +138,107 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
                 roots.add(i);
             }
         }
-
-
-
         return roots;
     }
 
     public List<Double> listOfParsedDoubleValues(){
-        List<Double> values = Arrays.asList(
-                Double.parseDouble(x9TextField.getText()),
-                Double.parseDouble(x8TextField.getText()),
-                Double.parseDouble(x7TextField.getText()),
-                Double.parseDouble(x6TextField.getText()),
-                Double.parseDouble(x5TextField.getText()),
-                Double.parseDouble(x4TextField.getText()),
-                Double.parseDouble(x3TextField.getText()),
-                Double.parseDouble(x2TextField.getText()),
-                Double.parseDouble(x1TextField.getText()),
-                Double.parseDouble(cTextField.getText()),
-                Double.parseDouble(xValTextField.getText()));
-
+        List<Double> values = new ArrayList<>();
+        for (int i = fields.length-1; i >= 0; i--){
+            values.add(Double.parseDouble(fields[i].getText()));
+        }
         return values;
     }
 
     public List<BigDecimal> listOfParsedBigDecmialValues(){
-        List<BigDecimal> values = Arrays.asList(
-                new BigDecimal(x9TextField.getText()),
-                new BigDecimal(x8TextField.getText()),
-                new BigDecimal(x7TextField.getText()),
-                new BigDecimal(x6TextField.getText()),
-                new BigDecimal(x5TextField.getText()),
-                new BigDecimal(x4TextField.getText()),
-                new BigDecimal(x3TextField.getText()),
-                new BigDecimal(x2TextField.getText()),
-                new BigDecimal(x1TextField.getText()),
-                new BigDecimal(cTextField.getText()),
-                new BigDecimal(xValTextField.getText()));
+        List<BigDecimal> values = new ArrayList<>();
+        for (int i = fields.length-1; i >= 0; i--){
+            values.add(new BigDecimal(fields[i].getText()));
+        }
         return values;
     }
 
     public Map<String, Double> parsedValuesMap(){
         Map<String, Double> values = new HashMap<String, Double>();
-
-        values.put("x9", Double.parseDouble(x9TextField.getText()));
-        values.put("x8", Double.parseDouble(x8TextField.getText()));
-        values.put("x7", Double.parseDouble(x7TextField.getText()));
-        values.put("x6", Double.parseDouble(x6TextField.getText()));
-        values.put("x5", Double.parseDouble(x5TextField.getText()));
-        values.put("x4", Double.parseDouble(x4TextField.getText()));
-        values.put("x3", Double.parseDouble(x3TextField.getText()));
-        values.put("x2", Double.parseDouble(x2TextField.getText()));
-        values.put("x1", Double.parseDouble(x1TextField.getText()));
-        values.put("c", Double.parseDouble(cTextField.getText()));
-        values.put("xVal", Double.parseDouble(xValTextField.getText()));
-
+        for (int i = fields.length-1; i >= 0; i--){
+            values.put(String.valueOf(i) ,Double.parseDouble(fields[i].getText()));
+        }
         return values;
     }
 
     public void resetValues(){
-        x9TextField.setText("0");
-        x8TextField.setText("0");
-        x7TextField.setText("0");
-        x6TextField.setText("0");
-        x5TextField.setText("0");
-        x4TextField.setText("0");
-        x3TextField.setText("0");
-        x2TextField.setText("0");
-        x1TextField.setText("0");
-        cTextField.setText("0");
-        xValTextField.setText("0");
+        for (int i = 0; i < fields.length; i++) {
+            fields[i].setText("0");
+        }
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == bEvalute){
+
+            try {
+                List<BigDecimal> data = new ArrayList<>();
+                for (JTextField field : fields) {
+                    data.add(new BigDecimal(field.getText()));
+                }
+                dataService.zapisz(data, FILE_NAME);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Invalid input. Please enter numbers only.", "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Error saving data: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
             List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecmialValues();
             System.out.println(findRoots(listOfBigDecimalValues, new BigDecimal("0.02")));
 
-            System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(xValTextField.getText())));
+            System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(fields[0].getText())));
 
         }
         else if (e.getSource() == bReset){
             resetValues();
         }
 
+        else if (e.getSource() == loadHistory){
+            try {
+                List<List<BigDecimal>> history = dataService.zaladuj(FILE_NAME);
+                if (!history.isEmpty()) {
+                    showHistoryDialog(history);
+                } else {
+                    JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "No data to load.");
+                }
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Error loading data: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
 
+    private void showHistoryDialog(List<List<BigDecimal>> history) {
+        // Tworzymy listę opcji
+        List<String> options = new ArrayList<>();
+        for (int i = 0; i < history.size(); i++) {
+            options.add("Set " + (i + 1) + ": " + history.get(i).toString());
+        }
+
+        // Okno dialogowe z listą rozwijaną
+        String selected = (String) JOptionPane.showInputDialog(
+                this,
+                "Select a data set:",
+                "Data History",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                options.toArray(),
+                options.get(0)
+        );
+
+        // Wybór zestawu
+        if (selected != null) {
+            int selectedIndex = options.indexOf(selected);
+            List<BigDecimal> chosenSet = history.get(selectedIndex);
+
+            // Wypełniamy pola tekstowe danymi z wybranego zestawu
+            for (int i = 0; i < Math.min(fields.length, chosenSet.size()); i++) {
+                fields[i].setText(chosenSet.get(i).toString());
+            }
+        }
     }
 
     BigDecimal newtonRaphson(List<BigDecimal> values, BigDecimal x0, int maxIterations, BigDecimal tolerance) {
@@ -323,7 +263,6 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         }
         throw new ArithmeticException("Nie znaleziono rozwiązania w maksymalnej liczbie iteracji.");
     }
-
 
     // Funkcja obliczająca wartość wielomianu
     public static BigDecimal evaluatePolynomial(List<BigDecimal> values, BigDecimal x) {
