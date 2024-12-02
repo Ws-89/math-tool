@@ -14,8 +14,8 @@ import java.util.List;
 public class DataHistoryService {
     private final Gson gson = new Gson();
 
-    public void zapisz(List<BigDecimal> data, String fileName) throws IOException {
-        List<List<BigDecimal>> history = zaladuj(fileName);
+    public void save(List<BigDecimal> data, String fileName) throws IOException {
+        List<List<BigDecimal>> history = load(fileName);
         history.add(data);
 
         try (FileWriter writer = new FileWriter(fileName)) {
@@ -23,7 +23,7 @@ public class DataHistoryService {
         }
     }
 
-    public List<List<BigDecimal>> zaladuj(String fileName) throws IOException {
+    public List<List<BigDecimal>> load(String fileName) throws IOException {
         try (FileReader reader = new FileReader(fileName)) {
             Type listType = new TypeToken<List<List<BigDecimal>>>() {}.getType();
             List<List<BigDecimal>> history = gson.fromJson(reader, listType);

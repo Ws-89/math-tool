@@ -9,9 +9,10 @@ import java.awt.event.FocusEvent;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class PolynomialDegree9Solver extends JFrame implements ActionListener {
 
@@ -124,21 +125,80 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         add(plane);
     }
 
-    public List<BigDecimal> findRoots(List<BigDecimal> values, BigDecimal epsilon){
-        List<BigDecimal> roots = new ArrayList<>();
-
+    public List<BigDecimal> findRootsMultiThreading(List<BigDecimal> values, BigDecimal epsilon, BigDecimal step) throws InterruptedException, ExecutionException {
         BigDecimal start = values.get(9).abs().negate().add(new BigDecimal("1"));
         BigDecimal end = values.get(9).abs().subtract(new BigDecimal("-1"));
-        BigDecimal step = new BigDecimal("0.00001");  // Krok iteracji
 
-        for(BigDecimal i = start; i.compareTo(end) <= 0; i = i.add(step)){
-            System.out.println("start: " + i);
-            BigDecimal result = evaluatePolynomial(values, i.setScale(10, RoundingMode.HALF_UP));
-            if (result.abs().compareTo(epsilon) == -1) {
-                roots.add(i);
+        int numThreads = Runtime.getRuntime().availableProcessors(); // Liczba wątków
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        List<Callable<List<BigDecimal>>> tasks = new ArrayList<>();
+
+        // Podziel zakres na fragmenty
+        BigDecimal rangeSize = end.subtract(start).divide(BigDecimal.valueOf(numThreads));
+        for (BigDecimal i = start; i.compareTo(end) < 0; i = i.add(rangeSize)) {
+            BigDecimal rangeEnd = i.add(rangeSize).min(end);
+
+            BigDecimal finalI = i;
+            BigDecimal finalRangeEnd = rangeEnd;
+
+            tasks.add(() -> {
+                List<BigDecimal> localRoots = new ArrayList<>();
+                for (BigDecimal x = finalI; x.compareTo(finalRangeEnd) <= 0; x = x.add(step)) {
+                    BigDecimal result = evaluatePolynomial(values, x);
+                    if (result.abs().compareTo(epsilon) == -1) {
+                        localRoots.add(x);
+                    }
+                }
+                return localRoots;
+            });
+        }
+
+        // Uruchom zadania równolegle
+        List<Future<List<BigDecimal>>> futures = executor.invokeAll(tasks);
+
+        // Zbieranie wyników
+        List<BigDecimal> roots = Collections.synchronizedList(new ArrayList<>());
+        for (Future<List<BigDecimal>> future : futures) {
+            roots.addAll(future.get());
+        }
+
+        executor.shutdown();
+
+        List<BigDecimal> uniqueRoots = getUniqueRoots(epsilon, roots);
+
+        return uniqueRoots;
+    }
+
+    private static List<BigDecimal> getUniqueRoots(BigDecimal epsilon, List<BigDecimal> roots) {
+        // Posortuj pierwiastki
+        List<BigDecimal> sortedRoots = roots.stream()
+                .sorted()
+                .collect(Collectors.toList());
+
+        // Lista wynikowa
+        List<BigDecimal> uniqueRoots = new ArrayList<>();
+
+        // Tymczasowa grupa
+        List<BigDecimal> currentGroup = new ArrayList<>();
+
+        for (int i = 0; i < sortedRoots.size(); i++) {
+            if (currentGroup.isEmpty() || sortedRoots.get(i).subtract(currentGroup.get(currentGroup.size() - 1)).abs().compareTo(epsilon) <= 0) {
+                // Dodaj do bieżącej grupy, jeśli różnica <= tolerancja
+                currentGroup.add(sortedRoots.get(i));
+            } else {
+                // Wybierz środek bieżącej grupy i dodaj do wyników
+                uniqueRoots.add(getMiddleOfGroup(currentGroup));
+                // Rozpocznij nową grupę
+                currentGroup.clear();
+                currentGroup.add(sortedRoots.get(i));
             }
         }
-        return roots;
+
+        // Dodaj środek ostatniej grupy
+        if (!currentGroup.isEmpty()) {
+            uniqueRoots.add(getMiddleOfGroup(currentGroup));
+        }
+        return uniqueRoots;
     }
 
     public List<Double> listOfParsedDoubleValues(){
@@ -180,7 +240,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
                 for (JTextField field : fields) {
                     data.add(new BigDecimal(field.getText()));
                 }
-                dataService.zapisz(data, FILE_NAME);
+                dataService.save(data, FILE_NAME);
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Invalid input. Please enter numbers only.", "Error", JOptionPane.ERROR_MESSAGE);
             } catch (IOException ex) {
@@ -188,7 +248,15 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
             }
 
             List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecmialValues();
-            System.out.println(findRoots(listOfBigDecimalValues, new BigDecimal("0.02")));
+
+
+            try {
+                System.out.println(findRootsMultiThreading(listOfBigDecimalValues, new BigDecimal("0.02"), new BigDecimal("0.00001")));
+            } catch (InterruptedException ex) {
+                throw new RuntimeException(ex);
+            } catch (ExecutionException ex) {
+                throw new RuntimeException(ex);
+            }
 
             System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(fields[0].getText())));
 
@@ -199,7 +267,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
 
         else if (e.getSource() == loadHistory){
             try {
-                List<List<BigDecimal>> history = dataService.zaladuj(FILE_NAME);
+                List<List<BigDecimal>> history = dataService.load(FILE_NAME);
                 if (!history.isEmpty()) {
                     showHistoryDialog(history);
                 } else {
@@ -215,7 +283,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         // Tworzymy listę opcji
         List<String> options = new ArrayList<>();
         for (int i = 0; i < history.size(); i++) {
-            options.add("Set " + (i + 1) + ": " + history.get(i).toString());
+            options.add("Set " + (i + 1) + ": " + history.get(i).reversed().toString());
         }
 
         // Okno dialogowe z listą rozwijaną
@@ -226,7 +294,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
                 JOptionPane.PLAIN_MESSAGE,
                 null,
                 options.toArray(),
-                options.get(0)
+                options.get(options.size()-1)
         );
 
         // Wybór zestawu
@@ -289,5 +357,11 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
                 .add(values.get(6).multiply(BigDecimal.valueOf(3)).multiply(x.pow(2)))
                 .add(values.get(7).multiply(BigDecimal.valueOf(2)).multiply(x))
                 .add(values.get(8));
+    }
+
+    // Funkcja wybierająca środek grupy
+    private static BigDecimal getMiddleOfGroup(List<BigDecimal> group) {
+        int middleIndex = group.size() / 2;
+        return group.get(middleIndex);
     }
 }
