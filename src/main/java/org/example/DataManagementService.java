@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DataHistoryService {
+public class DataManagementService {
     private final Gson gson = new Gson();
 
     public void save(List<BigDecimal> data, String fileName) throws IOException {

@@ -2,8 +2,6 @@ package org.example;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.io.IOException;
@@ -14,20 +12,20 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
-public class PolynomialDegree9Solver extends JFrame implements ActionListener {
+public class PolynomialDegree9Solver extends JFrame {
 
     private final JButton bEvalute, bReset, loadHistory;
     private final JLabel displayResult;
     private final JTextField[] fields = new JTextField[11];
     private final CartesianPlane plane;
     private final String FILE_NAME = "data_history.json";
-    private final DataHistoryService dataService;
+    private final DataManagementService dataService;
 
     public PolynomialDegree9Solver() {
         setSize(1500,1000);
         setTitle("Polynomial Solver Degree 9");
         setLayout(null);
-        dataService = new DataHistoryService();
+        dataService = new DataManagementService();
 
         int startX = 50;
         int startY = 0;
@@ -37,81 +35,52 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         int positionCounter = 0;
 
         for (int i = fields.length-1; i >= 0; i--){
-            if (i == 1){
-                JLabel label = new JLabel("c");
-                JTextField textField = new JTextField();
-
-                int positionX = startX + xOffset*(fields.length-2);
-
-                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
-                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
-                textField.addFocusListener(new FocusAdapter() {
-                    @Override
-                    public void focusGained(FocusEvent e) {
-                        SwingUtilities.invokeLater(textField::selectAll);
-                    }
-                });
-                textField.setText("0");
-                add(textField);
-                add(label);
-                fields[i] = textField;
-
+            JLabel label;
+            if (i == 1) {
+                label = new JLabel("c");
             } else if (i == 0){
-                JLabel label = new JLabel("val");
-                JTextField textField = new JTextField();
-
-                int positionX = startX + xOffset*(fields.length-1);
-
-                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
-                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
-                textField.addFocusListener(new FocusAdapter() {
-                    @Override
-                    public void focusGained(FocusEvent e) {
-                        SwingUtilities.invokeLater(textField::selectAll);
-                    }
-                });
-                textField.setText("0");
-                add(textField);
-                add(label);
-                fields[i] = textField;
+                    label = new JLabel("val");
             } else {
                 int num = i -1;
-                JLabel label = new JLabel("x" + num);
-                JTextField textField = new JTextField();
-
-                int positionX = startX + xOffset * positionCounter;
-
-                label.setBounds(positionX, startY, fieldWidth, fieldHeight);
-                textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
-                textField.addFocusListener(new FocusAdapter() {
-                    @Override
-                    public void focusGained(FocusEvent e) {
-                        SwingUtilities.invokeLater(textField::selectAll);
-                    }
-                });
-                textField.setText("0");
-                add(textField);
-                add(label);
-                positionCounter++;
-                fields[i] = textField;
+                label = new JLabel("x" + num);
             }
 
+            JTextField textField = new JTextField();
+
+            int positionX = startX + xOffset * positionCounter;
+
+            label.setBounds(positionX, startY, fieldWidth, fieldHeight);
+            textField.setBounds(positionX, startY + 50, fieldWidth, fieldHeight);
+            textField.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    SwingUtilities.invokeLater(textField::selectAll);
+                }
+            });
+            textField.setText("0");
+            add(textField);
+            add(label);
+            positionCounter++;
+            fields[i] = textField;
         }
 
         bEvalute = new JButton("Calculate");
         bEvalute.setBounds(50,110,100,50);
         add(bEvalute);
-        bEvalute.addActionListener(this);
+        bEvalute.addActionListener(e -> {
+            savePolynomialCoefficients();
+            findRootsByIterations();
+        });
 
         bReset = new JButton("Reset");
         bReset.setBounds(160,110,100,50);
         add(bReset);
-        bReset.addActionListener(this);
+        bReset.addActionListener(e -> resetValues());
 
         loadHistory = new JButton("Load previous values");
         loadHistory.setBounds(270,110,200,50);
         add(loadHistory);
-        loadHistory.addActionListener(this);
+        loadHistory.addActionListener(e -> loadHistoryData());
 
         displayResult = new JLabel("Result:");
         displayResult.setBounds(50, 170, 200, 20);
@@ -209,7 +178,7 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         return values;
     }
 
-    public List<BigDecimal> listOfParsedBigDecmialValues(){
+    public List<BigDecimal> listOfParsedBigDecimalValues(){
         List<BigDecimal> values = new ArrayList<>();
         for (int i = fields.length-1; i >= 0; i--){
             values.add(new BigDecimal(fields[i].getText()));
@@ -231,55 +200,49 @@ public class PolynomialDegree9Solver extends JFrame implements ActionListener {
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == bEvalute){
-
-            try {
-                List<BigDecimal> data = new ArrayList<>();
-                for (JTextField field : fields) {
-                    data.add(new BigDecimal(field.getText()));
-                }
-                dataService.save(data, FILE_NAME);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Invalid input. Please enter numbers only.", "Error", JOptionPane.ERROR_MESSAGE);
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Error saving data: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    private void loadHistoryData() {
+        try {
+            List<List<BigDecimal>> history = dataService.load(FILE_NAME);
+            if (!history.isEmpty()) {
+                loadPolynomialCoefficients(history);
+            } else {
+                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "No data to load.");
             }
-
-            List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecmialValues();
-
-
-            try {
-                System.out.println(findRootsMultiThreading(listOfBigDecimalValues, new BigDecimal("0.02"), new BigDecimal("0.00001")));
-            } catch (InterruptedException ex) {
-                throw new RuntimeException(ex);
-            } catch (ExecutionException ex) {
-                throw new RuntimeException(ex);
-            }
-
-            System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(fields[0].getText())));
-
-        }
-        else if (e.getSource() == bReset){
-            resetValues();
-        }
-
-        else if (e.getSource() == loadHistory){
-            try {
-                List<List<BigDecimal>> history = dataService.load(FILE_NAME);
-                if (!history.isEmpty()) {
-                    showHistoryDialog(history);
-                } else {
-                    JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "No data to load.");
-                }
-            } catch (IOException ex) {
-                JOptionPane.showMessageDialog(PolynomialDegree9Solver.this, "Error loading data: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        } catch (IOException ex) {
+            showErrorMessage("Error loading data: " + ex.getMessage());
         }
     }
 
-    private void showHistoryDialog(List<List<BigDecimal>> history) {
+    private void findRootsByIterations() {
+        List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecimalValues();
+
+        try {
+            System.out.println(findRootsMultiThreading(listOfBigDecimalValues, new BigDecimal("0.02"), new BigDecimal("0.00001")));
+        } catch (InterruptedException ex) {
+            throw new RuntimeException(ex);
+        } catch (ExecutionException ex) {
+            throw new RuntimeException(ex);
+        }
+
+        System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(fields[0].getText())));
+    }
+
+    private void savePolynomialCoefficients() {
+        try {
+            List<BigDecimal> data = listOfParsedBigDecimalValues();
+            dataService.save(data, FILE_NAME);
+        } catch (NumberFormatException ex) {
+            showErrorMessage("Invalid input. Please enter numbers only.");
+        } catch (IOException ex) {
+            showErrorMessage("Error saving data: " + ex.getMessage());
+        }
+    }
+
+    private void showErrorMessage(String message) {
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void loadPolynomialCoefficients(List<List<BigDecimal>> history) {
         // Tworzymy listę opcji
         List<String> options = new ArrayList<>();
         for (int i = 0; i < history.size(); i++) {
