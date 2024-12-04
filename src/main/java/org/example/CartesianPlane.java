@@ -4,30 +4,26 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
 import java.math.BigDecimal;
-import java.math.MathContext;
+import java.util.List;
 
 public class CartesianPlane extends JPanel {
     private int offsetX = 350, offsetY = 350; // Pozycja środka siatki
     private double scale = 1.0; // Skala siatki
 
-    private BigDecimal X9 = new BigDecimal("0.0");
-    private BigDecimal X8 = new BigDecimal("0.0");
-    private BigDecimal X7 = new BigDecimal("0.0");
-    private BigDecimal X6 = new BigDecimal("0.0");
-    private BigDecimal X5 = new BigDecimal("0.0");
-    private BigDecimal X4 = new BigDecimal("0.0");
-    private BigDecimal X3 = new BigDecimal("1.0");
-    private BigDecimal X2 = new BigDecimal("1.0");
-    private BigDecimal X1 = new BigDecimal("0.0");
-    private BigDecimal C = new BigDecimal("0.0");
+    private final BigDecimal[] fields = new BigDecimal[10];
 
     private BigDecimal STEP = new BigDecimal("0.1");
-    private BigDecimal START = new BigDecimal("-20");
-    private BigDecimal STOP = new BigDecimal("20");
+    private BigDecimal START = new BigDecimal("-200");
+    private BigDecimal STOP = new BigDecimal("200");
+
+    private boolean coefficientsSet = false;
 
     public CartesianPlane() {
+        for (int i = 0; i < fields.length; i++) {
+            fields[i] = BigDecimal.ZERO;
+        }
+
         // Obsługa przesuwania siatki
         MouseAdapter mouseAdapter = new MouseAdapter() {
             private Point lastPoint = null;
@@ -106,42 +102,44 @@ public class CartesianPlane extends JPanel {
         g2d.drawString("5", 0, -55);
         g2d.drawString("-5", 0, 45);
 
-        // Rysowanie funkcji kwadratowej
-        g2d.setColor(Color.RED);
-        g2d.setStroke(new BasicStroke(2));
+        if(coefficientsSet){
+            // Rysowanie funkcji kwadratowej
+            g2d.setColor(Color.RED);
+            g2d.setStroke(new BasicStroke(2));
 
-        BigDecimal x = START;
-        BigDecimal previousX = null;
-        BigDecimal previousY = null;
+            BigDecimal x = START;
+            BigDecimal previousX = null;
+            BigDecimal previousY = null;
 
-        double graph_scale = 10.0;
+            double graph_scale = 10.0;
 
-        while (x.compareTo(STOP) <= 0){
-            BigDecimal y = X9.multiply(x.pow(9))
-                    .add(X8.multiply(x.pow(8)))
-                    .add(X7.multiply(x.pow(7)))
-                    .add(X6.multiply(x.pow(6)))
-                    .add(X5.multiply(x.pow(5)))
-                    .add(X4.multiply(x.pow(4)))
-                    .add(X3.multiply(x.pow(3)))
-                    .add(X2.multiply(x.pow(2)))
-                    .add(X1.multiply(x.pow(1)))
-                    .add(C);
+            while (x.compareTo(STOP) <= 0){
+                BigDecimal y = fields[0].multiply(x.pow(9))
+                        .add(fields[1].multiply(x.pow(8)))
+                        .add(fields[2].multiply(x.pow(7)))
+                        .add(fields[3].multiply(x.pow(6)))
+                        .add(fields[4].multiply(x.pow(5)))
+                        .add(fields[5].multiply(x.pow(4)))
+                        .add(fields[6].multiply(x.pow(3)))
+                        .add(fields[7].multiply(x.pow(2)))
+                        .add(fields[8].multiply(x.pow(1)))
+                        .add(fields[9]);
 
-            if(previousX != null & previousY != null) {
-                // Convert coordinates to screen space
-                int x1 = (int) (previousX.doubleValue() * graph_scale);
-                int y1 = (int) (previousY.doubleValue() * graph_scale);
-                int x2 = (int) (x.doubleValue() * graph_scale);
-                int y2 = (int) (y.doubleValue() * graph_scale);
+                if(previousX != null & previousY != null) {
+                    // Convert coordinates to screen space
+                    int x1 = (int) (previousX.doubleValue() * graph_scale);
+                    int y1 = (int) (previousY.doubleValue() * graph_scale);
+                    int x2 = (int) (x.doubleValue() * graph_scale);
+                    int y2 = (int) (y.doubleValue() * graph_scale);
 
-                g2d.drawLine(x1, -y1, x2, -y2);
+                    g2d.drawLine(x1, -y1, x2, -y2);
+                }
+
+                previousX = x;
+                previousY = y;
+
+                x = x.add(STEP);
             }
-
-            previousX = x;
-            previousY = y;
-
-            x = x.add(STEP);
         }
 
         // Przywrócenie oryginalnego przekształcenia
@@ -150,27 +148,12 @@ public class CartesianPlane extends JPanel {
         g2d.drawString("Scale: " + String.format("%.2f", scale), 10, 20);
     }
 
-    public void setCoefficients(BigDecimal X9,
-                                BigDecimal X8,
-                                BigDecimal X7,
-                                BigDecimal X6,
-                                BigDecimal X5,
-                                BigDecimal X4,
-                                BigDecimal X3,
-                                BigDecimal X2,
-                                BigDecimal X1,
-                                BigDecimal C
-                                ) {
-        this.X9 = X9;
-        this.X8 = X8;
-        this.X7 = X7;
-        this.X6 = X6;
-        this.X5 = X5;
-        this.X4 = X4;
-        this.X3 = X3;
-        this.X2 = X2;
-        this.X1 = X1;
-        this.C = C;
+    public void setCoefficients(List<BigDecimal> values){
+        for(int i = 0; i < values.size()-1; i++){
+            fields[i] = values.get(i);
+        }
+
+        this.coefficientsSet = true;
         repaint();
     }
 

@@ -1,6 +1,7 @@
 package org.example;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -15,17 +16,21 @@ import java.util.stream.Collectors;
 public class PolynomialDegree9Solver extends JFrame {
 
     private final JButton bEvalute, bReset, loadHistory;
-    private final JLabel displayResult;
     private final JTextField[] fields = new JTextField[11];
     private final CartesianPlane plane;
     private final String FILE_NAME = "data_history.json";
     private final DataManagementService dataService;
+    private JTextArea resultTextArea;
+    private Map<String, List<BigDecimal>> results;
+    private Map<String, List<Boolean>> signs;
 
     public PolynomialDegree9Solver() {
         setSize(1500,1000);
         setTitle("Polynomial Solver Degree 9");
         setLayout(null);
         dataService = new DataManagementService();
+        results = new HashMap<>();
+        signs = new HashMap<>();
 
         int startX = 50;
         int startY = 0;
@@ -64,14 +69,6 @@ public class PolynomialDegree9Solver extends JFrame {
             fields[i] = textField;
         }
 
-        bEvalute = new JButton("Calculate");
-        bEvalute.setBounds(50,110,100,50);
-        add(bEvalute);
-        bEvalute.addActionListener(e -> {
-            savePolynomialCoefficients();
-            findRootsByIterations();
-        });
-
         bReset = new JButton("Reset");
         bReset.setBounds(160,110,100,50);
         add(bReset);
@@ -82,17 +79,115 @@ public class PolynomialDegree9Solver extends JFrame {
         add(loadHistory);
         loadHistory.addActionListener(e -> loadHistoryData());
 
-        displayResult = new JLabel("Result:");
-        displayResult.setBounds(50, 170, 200, 20);
-        displayResult.setForeground(Color.BLUE);
-        displayResult.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        add(displayResult);
-
         plane = new CartesianPlane();
         plane.setBounds(50, 200, 700, 700);
         plane.setBorder(BorderFactory.createLineBorder(Color.black));
         add(plane);
+
+        bEvalute = new JButton("Calculate");
+        bEvalute.setBounds(50,110,100,50);
+        add(bEvalute);
+        bEvalute.addActionListener(e -> {
+            savePolynomialCoefficients();
+            plane.setCoefficients(listOfParsedBigDecimalValues());
+            List<BigDecimal> byIteration = findRootsByIterations();
+            results.put("byIteration", byIteration);
+            List<Boolean> byIterationSigns = isFunctionPositiveInInterval(byIteration);
+            signs.put("byIteration", byIterationSigns);
+            setResultTextArea(results, signs, evaluatePolynomial(listOfParsedBigDecimalValues(), new BigDecimal(fields[0].getText())));
+        });
+
+        // Pole tekstowe do wyświetlania wyników
+        resultTextArea = new JTextArea();
+        resultTextArea.setEditable(false); // Wyłączenie edycji
+        resultTextArea.setFont(new Font("Monospaced", Font.PLAIN, 14)); // Matematyczny styl czcionki
+        resultTextArea.setBorder(new EmptyBorder(10, 10, 10, 10)); // Marginesy wewnętrzne
+        resultTextArea.setBackground(new Color(245, 245, 245)); // Jasnoszare tło dla czytelności
+
+        // Dodanie paska przewijania
+        JScrollPane scrollPane = new JScrollPane(resultTextArea);
+
+        // Dodanie elementów do ramki
+        this.getContentPane().add(scrollPane);
+        scrollPane.setBounds(800, 200, 600, 700);
+
     }
+
+    private boolean isPositive(BigDecimal value) {
+        return evaluatePolynomial(listOfParsedBigDecimalValues(), value).compareTo(BigDecimal.ZERO) >= 0;
+    }
+
+    private BigDecimal getMidpoint(BigDecimal a, BigDecimal b) {
+        return a.add(b).divide(new BigDecimal("2"));
+    }
+
+    public List<Boolean> isFunctionPositiveInInterval(List<BigDecimal> roots){
+        List<Boolean> signs = new ArrayList<>();
+
+        if (roots.isEmpty()) {
+            // Jeśli brak pierwiastków, funkcja jest dodatnia lub ujemna na całej dziedzinie.
+            BigDecimal testPoint = BigDecimal.ZERO; // Można przyjąć dowolny punkt
+            signs.add(isPositive(testPoint));
+            return signs;
+        }
+
+        BigDecimal minusInfinityPoint = roots.get(0).subtract(BigDecimal.ONE);
+        signs.add(isPositive(minusInfinityPoint));
+
+        for (int i =0; i < roots.size()-1; i++){
+            BigDecimal midPoint = getMidpoint(roots.get(i), roots.get(i+1));
+            signs.add(isPositive(midPoint));
+        }
+
+        BigDecimal plusInfinityPoint = roots.get(roots.size() - 1).add(BigDecimal.ONE);
+        signs.add(isPositive(plusInfinityPoint));
+
+        return signs;
+    }
+
+    public void setResultTextArea(Map<String, List<BigDecimal>> results, Map<String, List<Boolean>> signs, BigDecimal eval_result) {
+        // Initialize StringBuilder to construct the text
+        StringBuilder content = new StringBuilder();
+
+        // Add header with polynomial result
+        content.append("------------------------\n");
+        content.append("The polynomial result for the number ").append(fields[0].getText())
+                .append(" is: ").append(eval_result).append("\n");
+        content.append("------------------------\n");
+
+        // Iterate over the methods' results
+        for (Map.Entry<String, List<BigDecimal>> entry : results.entrySet()) {
+            String methodName = entry.getKey();
+            List<BigDecimal> roots = entry.getValue();
+            List<Boolean> methodSigns = signs.get(methodName);
+
+            content.append("Method name: ").append(methodName).append("\n");
+
+            // Add intervals with function values
+            if (roots.size() > 0) {
+                content.append("For the interval (-∞, ").append(roots.get(0)).append(") the function has a value: ")
+                        .append(methodSigns.get(0) ? "positive" : "negative").append("\n");
+
+                for (int i = 1; i < roots.size(); i++) {
+                    content.append("For the interval (").append(roots.get(i - 1)).append(", ").append(roots.get(i)).append(") the function has a value: ")
+                            .append(methodSigns.get(i) ? "positive" : "negative").append("\n");
+                }
+
+                content.append("For the interval (").append(roots.get(roots.size() - 1)).append(", ∞) the function has a value: ")
+                        .append(methodSigns.get(methodSigns.size() - 1) ? "positive" : "negative").append("\n");
+            } else {
+                // No roots case
+                content.append("No roots, the function has a value: ")
+                        .append(methodSigns.get(0) ? "positive" : "negative").append(" over the entire interval\n");
+            }
+
+            content.append("------------------------\n");
+        }
+
+        // Set the text in the text area
+        resultTextArea.setText(content.toString());
+    }
+
 
     public List<BigDecimal> findRootsMultiThreading(List<BigDecimal> values, BigDecimal epsilon, BigDecimal step) throws InterruptedException, ExecutionException {
         BigDecimal start = values.get(9).abs().negate().add(new BigDecimal("1"));
@@ -213,18 +308,17 @@ public class PolynomialDegree9Solver extends JFrame {
         }
     }
 
-    private void findRootsByIterations() {
+    private List<BigDecimal> findRootsByIterations() {
         List<BigDecimal> listOfBigDecimalValues = listOfParsedBigDecimalValues();
-
+        List<BigDecimal> result;
         try {
-            System.out.println(findRootsMultiThreading(listOfBigDecimalValues, new BigDecimal("0.02"), new BigDecimal("0.00001")));
+            result = findRootsMultiThreading(listOfBigDecimalValues, new BigDecimal("0.02"), new BigDecimal("0.00001"));
         } catch (InterruptedException ex) {
             throw new RuntimeException(ex);
         } catch (ExecutionException ex) {
             throw new RuntimeException(ex);
         }
-
-        System.out.println(evaluatePolynomial(listOfBigDecimalValues, new BigDecimal(fields[0].getText())));
+        return result;
     }
 
     private void savePolynomialCoefficients() {
@@ -246,7 +340,7 @@ public class PolynomialDegree9Solver extends JFrame {
         // Tworzymy listę opcji
         List<String> options = new ArrayList<>();
         for (int i = 0; i < history.size(); i++) {
-            options.add("Set " + (i + 1) + ": " + history.get(i).reversed().toString());
+            options.add("Set " + (i + 1) + ": " + history.get(i).toString());
         }
 
         // Okno dialogowe z listą rozwijaną
@@ -267,7 +361,7 @@ public class PolynomialDegree9Solver extends JFrame {
 
             // Wypełniamy pola tekstowe danymi z wybranego zestawu
             for (int i = 0; i < Math.min(fields.length, chosenSet.size()); i++) {
-                fields[i].setText(chosenSet.get(i).toString());
+                fields[i].setText(chosenSet.reversed().get(i).toString());
             }
         }
     }
@@ -296,7 +390,7 @@ public class PolynomialDegree9Solver extends JFrame {
     }
 
     // Funkcja obliczająca wartość wielomianu
-    public static BigDecimal evaluatePolynomial(List<BigDecimal> values, BigDecimal x) {
+    public BigDecimal evaluatePolynomial(List<BigDecimal> values, BigDecimal x) {
         return values.get(0).multiply(x.pow(9))
                 .add(values.get(1).multiply(x.pow(8)))
                 .add(values.get(2).multiply(x.pow(7)))
@@ -310,7 +404,7 @@ public class PolynomialDegree9Solver extends JFrame {
     }
 
     // Funkcja obliczająca wartość pochodnej
-    public static BigDecimal evaluateDerivative(List<BigDecimal> values, BigDecimal x) {
+    public BigDecimal evaluateDerivative(List<BigDecimal> values, BigDecimal x) {
         return values.get(0).multiply(BigDecimal.valueOf(9)).multiply(x.pow(8))
                 .add(values.get(1).multiply(BigDecimal.valueOf(8)).multiply(x.pow(7)))
                 .add(values.get(2).multiply(BigDecimal.valueOf(7)).multiply(x.pow(6)))
@@ -327,4 +421,5 @@ public class PolynomialDegree9Solver extends JFrame {
         int middleIndex = group.size() / 2;
         return group.get(middleIndex);
     }
+
 }
