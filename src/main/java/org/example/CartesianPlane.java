@@ -11,7 +11,7 @@ public class CartesianPlane extends JPanel {
     private int offsetX = 350, offsetY = 350; // Pozycja środka siatki
     private double scale = 1.0; // Skala siatki
 
-    private final BigDecimal[] fields = new BigDecimal[10];
+    private BigDecimal[] fields = new BigDecimal[10];
 
     private BigDecimal STEP = new BigDecimal("0.1");
     private BigDecimal START = new BigDecimal("-200");
@@ -112,18 +112,8 @@ public class CartesianPlane extends JPanel {
             BigDecimal previousY = null;
 
             double graph_scale = 10.0;
-
             while (x.compareTo(STOP) <= 0){
-                BigDecimal y = fields[0].multiply(x.pow(9))
-                        .add(fields[1].multiply(x.pow(8)))
-                        .add(fields[2].multiply(x.pow(7)))
-                        .add(fields[3].multiply(x.pow(6)))
-                        .add(fields[4].multiply(x.pow(5)))
-                        .add(fields[5].multiply(x.pow(4)))
-                        .add(fields[6].multiply(x.pow(3)))
-                        .add(fields[7].multiply(x.pow(2)))
-                        .add(fields[8].multiply(x.pow(1)))
-                        .add(fields[9]);
+                BigDecimal y = evaluatePolynomialForGraph(this.fields, x);
 
                 if(previousX != null & previousY != null) {
                     // Convert coordinates to screen space
@@ -148,10 +138,17 @@ public class CartesianPlane extends JPanel {
         g2d.drawString("Scale: " + String.format("%.2f", scale), 10, 20);
     }
 
-    public void setCoefficients(List<BigDecimal> values){
-        for(int i = 0; i < values.size()-1; i++){
-            fields[i] = values.get(i);
+    // Obliczanie wartości wielomianu w punkcie
+    public BigDecimal evaluatePolynomialForGraph(BigDecimal[] coeffs, BigDecimal x) {
+        BigDecimal result = BigDecimal.ZERO;
+        for(int i =0; i < coeffs.length-1; i++){
+            result = result.multiply(x).add(coeffs[i]);
         }
+        return result;
+    }
+
+    public void setCoefficients(BigDecimal[] values){
+        this.fields = values;
 
         this.coefficientsSet = true;
         repaint();
